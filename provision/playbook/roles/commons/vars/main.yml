@@ -1,0 +1,21 @@
+---
+common_packages:
+  - git
+  - curl
+  - flex
+  - bison*
+  - tcl
+  - tcl-devel
+  - perl-ExtUtils*
+  - openssl-devel
+  - readline-devel
+  - zlib-devel
+  - pam-devel
+  - libxml2-devel
+  - libxslt-devel
+  - openldap-devel
+  - uuid-devel
+  - libcurl-devel
+  # for nodejs
+  - gcc-c++
+  - make

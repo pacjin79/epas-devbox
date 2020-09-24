@@ -1,0 +1,1 @@
+/home/vagrant/db/bin/initdb -D /home/vagrant/pgdata

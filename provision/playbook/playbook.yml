@@ -1,0 +1,9 @@
+---
+- hosts: all
+  become_method: sudo
+  become_user: root
+  roles:
+    - commons
+    - node
+    - setup
+    # - docker
