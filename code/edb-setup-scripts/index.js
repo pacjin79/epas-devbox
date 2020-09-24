@@ -5,8 +5,9 @@ const Path = require('path');
 // const Exec = require('child_process').exec;
 const fs = require('fs');
 
-const sourceDirectory = Path.join(__dirname, '..', 'edbas');
+const sourceDirectory = '/home/vagrant/edbas'
 const sourceGitDirectory = Path.join(sourceDirectory, '.git');
+const workspaceDirectory = Path.join(__dirname, '..', 'edbas_work');
 const gitUserName = 'leo.jin';
 
 const prompt = () => {
@@ -22,118 +23,134 @@ const prompt = () => {
   });
 };
 
-const gitBranch = {
+const gitTrackingBranchTask = {
+  title: 'Setup tracking branch',
+  skip: () => {
+    const { stdout } = Execa.sync('git', ['branch'], {
+      cwd: sourceDirectory,
+    });
+    if (stdout.indexOf('EDBAS-master') !== -1) {
+      return 'Tracking branch already exist we skip';
+    }
+  },
+  task: () => {
+    const { stdout } = Execa.sync('git', ['branch', '--track', 'EDBAS-master', 'remotes/EDBAS/EDBAS-master'], {
+      cwd: sourceDirectory,
+    });
+    return stdout;
+  },
+};
 
-}
+const gitCheckoutMaster = {
+  title: 'Checkout the tracking branch',
+  skip: () => {
+    const exists = fs.existsSync(Path.join(sourceDirectory, 'Makefile'));
+    if (exists) {
+      return 'Checkout already done, skip...';
+    }
+  },
+  task: () => {
+    const { stdout } = Execa.sync('git', ['checkout', 'EDBAS-master'], {
+      cwd: sourceDirectory,
+    });
+    return stdout;
+  },
+};
 
 const gitFetchTask = {
   title: 'Git Fetch',
+  skip: () => {
+    const exists = fs.existsSync(Path.join(sourceGitDirectory, 'FETCH_HEAD'));
+    if (exists) {
+      return 'Fetch already done, skip...';
+    }
+  },
   task: () => {
-    const cmd = Execa('git', ['fetch', 'EDBAS', '+refs/heads/*:refs/remotes/EDBAS/*'], {
+    const cmd = Execa.sync('git', ['fetch', 'EDBAS', '+refs/heads/*:refs/remotes/EDBAS/*'], {
       cwd: sourceDirectory,
     });
-    console.log('streaming subprocess stout');
-    cmd.stdout.pipe(process.stdout);
-    cmd.stderr.pipe(process.stderr);
+    return cmd.stdout;
+  },
+};
+
+const gitCloneTask = {
+  title: 'Clone the workspace from tracking branch',
+  skip: () => {
+    const exists = fs.existsSync(workspaceDirectory);
+    if (exists) {
+      return 'Skip cloning, workspace already exist';
+    }
+  },
+  task: () => {
+    return Execa('git', ['clone', '.', workspaceDirectory], {
+      cwd: sourceDirectory,
+    });
   },
 };
 
 const gitRemoteTask = {
   title: 'Git Add Remote',
-  task: () => {
-    const exists = fs.existsSync(sourceGitDirectory);
-    if (exists) {
-      console.log('Found git remote.');
-    } else {
-      return Execa('git', ['remote', 'add', 'EDBAS', `ssh://${gitUserName}@scm.enterprisedb.com/git/EDBAS`], {
-        cwd: sourceDirectory,
-      });
+  skip: () => {
+    const results = Execa.sync('cat', ['.git/config'], {
+      cwd: sourceDirectory,
+    });
+    if (results.stdout.indexOf('EDBAS') !== -1) {
+      return `EDBAS Remote already exists, we skip...`;
     }
+  },
+  task: () => {
+    return Execa('git', ['remote', 'add', 'EDBAS', `ssh://${gitUserName}@scm.enterprisedb.com/git/EDBAS`], {
+      cwd: sourceDirectory,
+    });
   },
 };
 
 const gitInitTask = {
   title: 'Initialize Git Repository',
-  task: () => {
+  skip: () => {
     const exists = fs.existsSync(sourceGitDirectory);
     if (exists) {
-      console.log('Found .git');
-    } else {
-      return Execa('git', ['init'], {
-        cwd: sourceDirectory,
-      });
+      return `Repository already initialized, we skip...`;
     }
+  },
+  task: () => {
+    const { stdout } = Execa.sync('git', ['init'], {
+      cwd: sourceDirectory,
+    });
+    return stdout;
   },
 };
 
-const gitBranchAndCheckout = new Listr([
-    {
-        title: ''
-    }
-])
 const createCodeDirectory = {
   title: 'Create EDBas code directory',
-  task: () => {
+  skip: () => {
     const exists = fs.existsSync(sourceDirectory);
     if (exists) {
-      console.log('Source code directory exsits.');
-    } else {
-      fs.mkdirSync(sourceDirectory);
+      return 'Source code directory exsits, we skip...';
     }
+  },
+  task: () => {
+    fs.mkdirSync(sourceDirectory);
   },
 };
 
+const configureEdbasTask = {
+    title: 'Configure Edbas',
+    task: () => {
+        
+    }
+}
+
 const pipeline = new Listr([
-//   createCodeDirectory,
-//   gitInitTask,
-//   gitRemoteTask,
-//   gitFetchTask,
+  createCodeDirectory,
+  gitInitTask,
+  gitRemoteTask,
+  gitFetchTask,
+  gitTrackingBranchTask,
+  gitCheckoutMaster,
+  gitCloneTask,
 ]);
 
 pipeline.run().catch((err) => {
   console.error(err);
 });
-
-// prompt().then((ans) => {
-//   console.log('cloning from git ans = ', ans);
-// });
-
-// (async () => {
-// const ret = execa('git', ['fetch', 'EDBAS', '+refs/heads/*:refs/remotes/EDBAS/*'], {
-//   cwd: Path.join(__dirname, '..', 'edbas'),
-//   input: 'G0g0doll88!'
-// });
-//   console.log('huh');
-//   console.log(ret);
-//   ret.stdin.write('G0g0doll88!');
-//   return 'hi';
-// ret.stderr.pipe(process.stderr);
-// ret.stdout.pipe(process.stdout);
-// ret.then((val) => {
-//   console.log('finished val = ', val);
-// });
-// })().then((val) => {
-//   console.log(val);
-// });
-
-// const cmd = Exec(
-//   'git fetch EDBAS +refs/heads/*:refs/remotes/EDBAS/*',
-//   {
-//     cwd: Path.join(__dirname, '..', 'edbas'),
-//   },
-//   (err, stdout, stderr) => {
-//     console.log('stdout = ', stdout);
-//     console.log('err = ', err);
-//     // console.log('cmd = ', cmd);
-//   }
-// );
-// cmd.stdout.on('data', (val) => {
-//     fs.writeFileSync('hello.js', '');
-//     console.log('val = ', val);
-// })
-// cmd.stdin.on('data', val => {
-//     console.log('val = ', val);
-// })
-// cmd.stderr.pipe(process.stderr);
-// cmd.stdout.pipe(process.stdout);
-// cmd.stdin.write('yes');
