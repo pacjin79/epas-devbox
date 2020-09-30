@@ -52,22 +52,22 @@ Vagrant.configure("2") do |config|
     config.vm.network "private_network", ip: "192.168.1.77"
     config.vm.synced_folder "./code", "/home/vagrant/codebase", type: "nfs"
   else
-     # main-fe
-     config.vm.network "forwarded_port", 
-     guest: 4201, host: 4201, 
-     host_ip: "127.0.0.1"
+    # main-fe
+    config.vm.network "forwarded_port", 
+    guest: 4201, host: 4201, 
+    host_ip: "127.0.0.1"
 
-     # main-be
-     config.vm.network "forwarded_port", 
-     guest: 3201, host: 3201, 
-     host_ip: "127.0.0.1"
+    # main-be
+    config.vm.network "forwarded_port", 
+    guest: 3201, host: 3201, 
+    host_ip: "127.0.0.1"
     
-     # main-be
-     config.vm.network "forwarded_port", 
-     guest: 3100, host: 3100, 
-     host_ip: "127.0.0.1"
+    # main-be
+    config.vm.network "forwarded_port", 
+    guest: 3100, host: 3100, 
+    host_ip: "127.0.0.1"
 
-     config.vm.synced_folder "./code", "/home/vagrant/codebase", create: true
+    config.vm.synced_folder "./code", "/home/vagrant/codebase", create: true
   end
 
   config.ssh.forward_agent = true
