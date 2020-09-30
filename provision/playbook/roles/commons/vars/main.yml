@@ -19,3 +19,6 @@ common_packages:
   # for nodejs
   - gcc-c++
   - make
+
+provision_dir: "{{ home_dir }}/provision"
+provision_ssh_file: "{{ provision_dir }}/copy/ssh-key.tar.gz"

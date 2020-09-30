@@ -1,13 +1,13 @@
 - stat:
-    path: "{{ postgres_src_dir }}"
+    path: '{{ postgres_src_dir }}'
   register: postgres_src
 
 - stat:
-    path: "{{ postgres_binary_dir }}"
+    path: '{{ postgres_binary_dir }}'
   register: postgres_binary
 
 - stat:
-    path: "{{ postgres_conf_dir }}"
+    path: '{{ postgres_conf_dir }}'
   register: pgdata_dir
 
 - debug:
@@ -16,8 +16,8 @@
 
 - name: Clone posgres community
   git:
-    repo: "https://github.com/postgres/postgres.git"
-    dest: "{{ postgres_src_dir }}"
+    repo: 'https://github.com/postgres/postgres.git'
+    dest: '{{ postgres_src_dir }}'
   when: not postgres_src.stat.exists
 
 - debug:
@@ -25,49 +25,49 @@
   when: not postgres_binary.stat.exists
 
 - name: Configure and install postgres workspace
-  shell: "sh {{ home_dir }}/provision/scripts/setup.sh"
+  shell: 'sh {{ home_dir }}/provision/scripts/setup.sh'
   args:
-    chdir: "{{ postgres_src_dir }}"
+    chdir: '{{ postgres_src_dir }}'
     warn: false
   when: not postgres_src.stat.exists
 
 - name: Source .bashrc
-  shell: "source {{ home_dir }}/.bashrc"
+  shell: 'source {{ home_dir }}/.bashrc'
   args:
     warn: false
 
 - debug:
-    msg: "path = {{ postgres_binary_dir }}"
+    msg: 'path = {{ postgres_binary_dir }}'
 
 - name: Wait until installation is completed
   wait_for:
-    path: "{{ postgres_binary_dir }}"
+    path: '{{ postgres_binary_dir }}'
 
 - name: Initialize Postgres DB
-  shell: "sh {{ home_dir }}/provision/scripts/initialize.sh"
+  shell: 'sh {{ home_dir }}/provision/scripts/initialize.sh'
   become: yes
   become_user: vagrant
   when: not pgdata_dir.stat.exists
 
 - name: Wait until initialization is completed
   wait_for:
-    path: "{{ postgres_conf_dir }}"
+    path: '{{ postgres_conf_dir }}'
 
 - name: Update pg_hba.conf
   lineinfile:
-    path: "{{ postgres_conf_dir }}/pg_hba.conf"
+    path: '{{ postgres_conf_dir }}/pg_hba.conf'
     line: host all all 0.0.0.0/0 trust
     state: present
 
 - name: Update postgresql.conf
   lineinfile:
-    path: "{{ postgres_conf_dir }}/postgresql.conf"
+    path: '{{ postgres_conf_dir }}/postgresql.conf'
     line: listen_addresses = '*'
     state: present
 
 - name: Insert env into .bashrc
   blockinfile:
-    path: "{{ home_dir }}/.bashrc"
+    path: '{{ home_dir }}/.bashrc'
     block: |
       export LC_CTYPE="en_US.UTF-8"
       export LC_ALL="en_US.UTF-8"
@@ -75,14 +75,135 @@
     state: present
 
 ###  EDBAS scripts start here.
+
 - stat:
-    path: "{{ edbas_src_dir }}"
+    path: '{{ edbas_src_dir }}'
   register: edbas_src
 
 - stat:
-    path: "{{ edbas_binary_dir }}"
+    path: '{{ edbas_src_dir }}/.git'
+  register: edbas_src_git
+
+- stat:
+    path: '{{ edbas_binary_dir }}'
   register: edbas_binary
 
 - stat:
-    path: "{{ edbas_conf_dir}}"
+    path: '{{ edbas_src_dir }}/.git/FETCH_HEAD'
+  register: edbas_initial_fetch
+
+- stat:
+    path: '{{ edbas_conf_dir}}'
   register: edbas_conf
+
+- stat:
+    path: '{{ edbas_src_dir }}/Makefile'
+  register: edbas_make_file
+
+- stat:
+    path: '{{ edbas_workspace_dir }}'
+  register: edbas_workspace
+
+- stat:
+    path: '{{ edbas_workspace_dir }}/config.status'
+  register: edbas_workspace_configured
+
+- stat:
+    path: '{{ edbas_workspace_dir }}/GNUmakefile'
+  register: edbas_workspace_installed
+
+- stat:
+    path: '{{ home_dir }}/edbas_pgdata'
+  register: edbas_db_started
+
+- name: Create EDBAS source code directory
+  file:
+    path: '{{ edbas_src_dir }}'
+    state: directory
+  become: yes
+  become_user: vagrant
+
+- name: Initialize Git Repository
+  shell: 'git init'
+  args:
+    chdir: '{{ edbas_src_dir }}'
+  when: not edbas_src_git.stat.exists
+  become: yes
+  become_user: vagrant
+
+- name: Check for remote head existance
+  shell: 'cat {{ edbas_src_dir }}/.git/config'
+  register: git_config_content
+  become: yes
+  become_user: vagrant
+
+- name: Add git remote
+  shell: 'git remote add EDBAS ssh://{{git_user_name}}@scm.enterprisedb.com/git/EDBAS'
+  args:
+    chdir: '{{ edbas_src_dir }}'
+  when: git_config_content.stdout.find('EDBAS') == -1
+  become: yes
+  become_user: vagrant
+
+- name: Fetch git remote
+  shell: 'git fetch EDBAS +refs/heads/*:refs/remotes/EDBAS/*'
+  args:
+    chdir: '{{ edbas_src_dir }}'
+  when: not edbas_initial_fetch.stat.exists
+  become: yes
+  become_user: vagrant
+
+- name: Check if tracking branch already exist
+  shell: 'git branch'
+  args:
+    chdir: '{{ edbas_src_dir }}'
+  register: git_branch_output
+
+- name: Setup master tracking branch
+  shell: 'git branch --track EDBAS-master remotes/EDBAS/EDBAS-master'
+  args:
+    chdir: '{{ edbas_src_dir }}'
+  when: git_branch_output.stdout.find('EDBAS-master') == -1
+  become: yes
+  become_user: vagrant
+
+- name: Checkout git EDBAS-master
+  shell: 'git checkout EDBAS-master'
+  args:
+    chdir: '{{ edbas_src_dir }}'
+  when: not edbas_make_file.stat.exists
+  become: yes
+  become_user: vagrant
+
+- name: Clone into workspace
+  shell: 'git clone . {{ edbas_workspace_dir }}'
+  args:
+    chdir: '{{ edbas_src_dir }}'
+  when: not edbas_workspace.stat.exists
+
+- name: Configure EDBAS
+  shell: './configure --with-openssl --with-zlib --with-tcl --with-perl --with-libxslt --with-ossp-uuid --with-ldap --with-pam --with-libcurl --with-pgport=5444 --enable-nls --enable-cassert --enable-debug --enable-depend --prefix={{ edbas_workspace_dir }}/db CFLAGS="-g -O0"'
+  args:
+    chdir: '{{ edbas_workspace_dir }}'
+  when: not edbas_workspace_configured.stat.exists
+
+- name: Make and Install EDBAS
+  block:
+    - name: Make EDBAS
+      make:
+        chdir: '{{ edbas_workspace_dir }}'
+    - name: Install EDBAS
+      make:
+        chdir: '{{ edbas_workspace_dir }}'
+        target: install
+  when: not edbas_workspace_installed.stat.exists
+
+- name: Initialize and start EDBAS DB
+  block:
+    - name: Initialize EDBAS DB
+      shell: '{{ edbas_workspace_dir }}/db/bin/initdb -D "{{ home_dir }}/edbas_pgdata"'
+    - name: Start EDBAS DB Server
+      shell: '{{ edbas_workspace_dir }}/db/bin/pg_ctl -D "{{ home_dir }}/edbas_pgdata" -l edbas.log start'
+  become: yes
+  become_user: vagrant
+  when: not edbas_db_started.stat.exists
