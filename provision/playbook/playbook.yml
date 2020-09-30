@@ -8,5 +8,6 @@
   roles:
     - commons
     - node
-    - setup
+    - postgresql
+    - edbas
     # - docker

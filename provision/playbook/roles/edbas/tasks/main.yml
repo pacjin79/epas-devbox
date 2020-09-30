@@ -1,82 +1,4 @@
 - stat:
-    path: '{{ postgres_src_dir }}'
-  register: postgres_src
-
-- stat:
-    path: '{{ postgres_binary_dir }}'
-  register: postgres_binary
-
-- stat:
-    path: '{{ postgres_conf_dir }}'
-  register: pgdata_dir
-
-- debug:
-    msg: "Postgres source dir doesn't exist, we clone."
-  when: not postgres_src.stat.exists
-
-- name: Clone posgres community
-  git:
-    repo: 'https://github.com/postgres/postgres.git'
-    dest: '{{ postgres_src_dir }}'
-  when: not postgres_src.stat.exists
-
-- debug:
-    msg: "Postgres binary doesn't exist, we install."
-  when: not postgres_binary.stat.exists
-
-- name: Configure and install postgres workspace
-  shell: 'sh {{ home_dir }}/provision/scripts/setup.sh'
-  args:
-    chdir: '{{ postgres_src_dir }}'
-    warn: false
-  when: not postgres_src.stat.exists
-
-- name: Source .bashrc
-  shell: 'source {{ home_dir }}/.bashrc'
-  args:
-    warn: false
-
-- debug:
-    msg: 'path = {{ postgres_binary_dir }}'
-
-- name: Wait until installation is completed
-  wait_for:
-    path: '{{ postgres_binary_dir }}'
-
-- name: Initialize Postgres DB
-  shell: 'sh {{ home_dir }}/provision/scripts/initialize.sh'
-  become: yes
-  become_user: vagrant
-  when: not pgdata_dir.stat.exists
-
-- name: Wait until initialization is completed
-  wait_for:
-    path: '{{ postgres_conf_dir }}'
-
-- name: Update pg_hba.conf
-  lineinfile:
-    path: '{{ postgres_conf_dir }}/pg_hba.conf'
-    line: host all all 0.0.0.0/0 trust
-    state: present
-
-- name: Update postgresql.conf
-  lineinfile:
-    path: '{{ postgres_conf_dir }}/postgresql.conf'
-    line: listen_addresses = '*'
-    state: present
-
-- name: Insert env into .bashrc
-  blockinfile:
-    path: '{{ home_dir }}/.bashrc'
-    block: |
-      export LC_CTYPE="en_US.UTF-8"
-      export LC_ALL="en_US.UTF-8"
-      export PATH=$PATH:{{ postgres_binary_dir }}
-    state: present
-
-###  EDBAS scripts start here.
-
-- stat:
     path: '{{ edbas_src_dir }}'
   register: edbas_src
 
@@ -201,9 +123,24 @@
 - name: Initialize and start EDBAS DB
   block:
     - name: Initialize EDBAS DB
-      shell: '{{ edbas_workspace_dir }}/db/bin/initdb -D "{{ home_dir }}/edbas_pgdata"'
+      shell: '{{ edbas_binary_dir }}/initdb -D "{{ home_dir }}/edbas_pgdata"'
     - name: Start EDBAS DB Server
-      shell: '{{ edbas_workspace_dir }}/db/bin/pg_ctl -D "{{ home_dir }}/edbas_pgdata" -l edbas.log start'
+      shell: '{{ edbas_binary_dir }}/pg_ctl -D "{{ home_dir }}/edbas_pgdata" -l edbas.log start'
   become: yes
   become_user: vagrant
   when: not edbas_db_started.stat.exists
+
+- name: Update edbas config so it can be accessed externally
+  block: 
+    - name: Update pg_hba.conf
+      lineinfile:
+        path: '{{ edbas_conf_dir }}/pg_hba.conf'
+        line: host all all 0.0.0.0/0 trust
+        state: present
+    - name: Update EDB postgresql.conf  
+      lineinfile:
+        path: '{{ edbas_conf_dir }}/postgresql.conf'
+        line: listen_addresses = '*'
+        state: present
+  become: yes
+  become_user: vagrant

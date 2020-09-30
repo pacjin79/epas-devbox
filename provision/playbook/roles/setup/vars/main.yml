@@ -1,9 +1,0 @@
----
-postgres_src_dir: '{{ home_dir }}/postgres'
-postgres_binary_dir: '{{ home_dir }}/db/bin'
-postgres_conf_dir: '{{ home_dir }}/pgdata'
-edbas_src_dir: '{{ home_dir }}/edbas'
-edbas_workspace_dir: '{{ home_dir }}/codebase/edbas_work'
-edbas_binary_dir: '{{ edbas_workspace_dir }}/db/bin'
-edbas_conf_dir: '{{ edbas_workspace_dir }}/pgdata'
-git_user_name: leo.jin

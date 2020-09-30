@@ -1,0 +1,4 @@
+---
+postgres_src_dir: '{{ home_dir }}/postgres'
+postgres_binary_dir: '{{ home_dir }}/db/bin'
+postgres_conf_dir: '{{ home_dir }}/pgdata'
