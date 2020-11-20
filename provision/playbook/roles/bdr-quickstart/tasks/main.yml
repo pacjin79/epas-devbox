@@ -1,0 +1,38 @@
+---
+- name: register BDR node directories
+  stat:
+    path: '{{ item }}'
+  loop: '{{ nodes }}'
+  register: node_stats
+
+# - debug:
+#     msg: 'path = {{ node_stats.results }}'
+
+# - debug:
+#     msg: 'path = {{ item.stat.path }}'
+#   loop: '{{node_stats.results}}'
+
+- name: Initialize BDR Nodes
+  shell: '{{ bdr_binary_path }}/initdb -D {{ item.stat.path }} -A trust -U postgres'
+  when: not item.stat.exists
+  loop: '{{ node_stats.results }}'
+  become: yes
+  become_user: vagrant
+
+- name: Add BDR Configuration
+  blockinfile:
+    path: '{{ item }}/postgresql.conf'
+    block: |
+      shared_preload_libraries = 'pglogical,bdr'
+      wal_level = 'logical'
+      track_commit_timestamp = on
+  loop: '{{ nodes }}'
+
+- name: Allowing replication on both nodes
+  blockinfile:
+    path: '{{ item }}/pg_hba.conf'
+    block: |
+      local   all   postgres                  trust
+      host    all   postgres     127.0.0.1/32 trust
+      host    all   postgres     ::1/128      trust
+  loop: '{{ nodes }}'

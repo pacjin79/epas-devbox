@@ -1,0 +1,19 @@
+---
+- stat:
+    path: '{{ bdr_repo.dest }}'
+  register: bdr_installer
+
+- name: Add BDR BDR Repo
+  block:
+    - name: Download BDR Installer
+      get_url:
+        url: '{{ bdr_repo.url }}'
+        dest: '{{ bdr_repo.dest }}'
+      when: not bdr_installer.stat.exists
+    - name: Install BDR Repo
+      shell: 'sh {{ bdr_repo.dest }}'
+
+- name: Install BDR
+  yum:
+    name: '{{ bdr_package }}'
+    state: present

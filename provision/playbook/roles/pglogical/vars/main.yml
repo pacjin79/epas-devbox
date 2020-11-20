@@ -1,0 +1,5 @@
+---
+pglogical_repo:
+  url: https://access.2ndquadrant.com/api/repository/dl/default/release/9.4/rpm
+  dest: '{{ home_dir }}/install_pglogical.sh'
+pglogical_package: postgresql94-pglogical

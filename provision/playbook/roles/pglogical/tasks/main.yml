@@ -1,0 +1,19 @@
+---
+- stat:
+    path: '{{ pglogical_repo.dest }}'
+  register: pglogical_installer
+
+- name: Add pglogical repo
+  block:
+    - name: Download pglogical installer
+      get_url:
+        url: '{{ pglogical_repo.url }}'
+        dest: '{{ pglogical_repo.dest }}'
+      when: not pglogical_installer.stat.exists
+    - name: Install pglogicall repo
+      shell: 'sh {{ pglogical_repo.dest }}'
+
+- name: Install pglogical
+  yum:
+    name: '{{ pglogical_package }}'
+    state: present

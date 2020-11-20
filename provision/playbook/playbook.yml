@@ -8,6 +8,9 @@
   roles:
     - commons
     - node
-    - postgresql
-    - edbas
+    - bdr
+    - pglogical
+    - bdr-quickstart
+    # - postgresql
+    # - edbas
     # - docker

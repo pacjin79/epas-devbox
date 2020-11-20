@@ -1,0 +1,5 @@
+---
+bdr_repo: 
+  url: https://dl.2ndquadrant.com/default/release/get/bdr9.4/rpm
+  dest: "{{ home_dir }}/install_bdr94.sh"
+bdr_package: postgresql-bdr94-bdr

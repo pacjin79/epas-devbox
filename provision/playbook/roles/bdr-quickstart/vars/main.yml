@@ -1,0 +1,5 @@
+---
+bdr_binary_path: '/usr/pgsql-9.4/bin'
+nodes:
+  - '{{ home_dir }}/2ndq_bdr/bdr5598'
+  - '{{ home_dir }}/2ndq_bdr/bdr5599'
